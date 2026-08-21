@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mock Post</title>
+  <style>
+    body { margin: 20px; background: #fafafa; }
+    .post-container { position: relative; width: 468px; height: 468px; margin: 0 auto; }
+    video { width: 100%; height: 100%; object-fit: cover; background: #ddd; }
+    .post-overlay {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 10; background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="post-container">
+    <video id="test-video" src="" loop muted playsinline data-testid="post-video"></video>
+    <div class="post-overlay"></div>
+  </div>
+  <script>
+    const v = document.getElementById('test-video')
+    Object.defineProperty(v, 'duration', { get: () => 60 })
+    let _ct = 0
+    Object.defineProperty(v, 'currentTime', { get: () => _ct, set: val => { _ct = val } })
+    v.paused = true
+    v.play = () => { v.paused = false; return Promise.resolve() }
+    v.pause = () => { v.paused = true }
+  </script>
+</body>
+</html>

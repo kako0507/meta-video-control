@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Meta Videos Control",
+  "version": "1.0.0",
+  "description": "Control Meta video speed, progress, and volume with a floating panel.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

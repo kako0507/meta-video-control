@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.superpowers/
+test-results/
+playwright-report/
+.env
+.env.*
+!.env.example
+tests/e2e/.auth/

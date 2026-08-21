@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mock Reels</title>
+  <style>
+    body { margin: 0; background: #000; }
+    .reel-container { position: relative; width: 400px; height: 700px; margin: 0 auto; }
+    video { width: 100%; height: 100%; object-fit: cover; background: #111; }
+    .overlay {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 10;
+      background: transparent;
+    }
+    .overlay-content {
+      position: absolute; bottom: 80px; left: 16px;
+      color: #fff; font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="reel-container">
+    <video id="test-video" src="" loop muted playsinline data-testid="reel-video"></video>
+    <div class="overlay">
+      <div class="overlay-content">@testuser</div>
+    </div>
+  </div>
+  <script>
+    const v = document.getElementById('test-video')
+    Object.defineProperty(v, 'duration', { get: () => 30, configurable: true })
+    let _ct = 0
+    Object.defineProperty(v, 'currentTime', { get: () => _ct, set: val => { _ct = val }, configurable: true })
+    let _paused = true
+    Object.defineProperty(v, 'paused', { get: () => _paused, configurable: true })
+    v.play = () => { _paused = false; return Promise.resolve() }
+    v.pause = () => { _paused = true }
+  </script>
+</body>
+</html>
