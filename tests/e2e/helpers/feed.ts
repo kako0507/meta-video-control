@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test'
+import { dismissInterstitials } from './session'
 
 export interface FeedVideo {
   index: number
@@ -72,4 +73,27 @@ export async function clickSpeed(page: Page, label: string) {
     ) as HTMLButtonElement
     target.click()
   }, label)
+}
+
+/**
+ * The post being watched covers roughly a quarter of the viewport; a neighbour
+ * peeking in from below stays well under a tenth. Photo posts leave neither.
+ */
+export const IN_VIEW = 0.15
+
+/**
+ * Scrolls past photo posts until a video other than `previousSrc` is in view.
+ * A feed can open on nothing but photos, so the first video may take a while —
+ * and until one exists there is no panel to assert anything about.
+ */
+export async function scrollToNextVideo(page: Page, previousSrc: string | null): Promise<FeedVideo> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await dismissInterstitials(page)
+    const current = await dominantVideo(page, IN_VIEW)
+    if (current && current.src !== previousSrc) return current
+    await page.mouse.move(640, 450)
+    await page.mouse.wheel(0, 700)
+    await page.waitForTimeout(1800)
+  }
+  throw new Error(`no further video scrolled into view after ${previousSrc ?? 'the top of the feed'}`)
 }
