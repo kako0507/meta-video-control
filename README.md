@@ -8,6 +8,7 @@ A Chrome extension that adds a floating control panel to Instagram, giving you f
 - **Progress bar** — drag to scrub, shows live time preview while dragging
 - **Play / Pause** button
 - **Volume slider** — drag to set, click mute icon to toggle
+- **Download** — save the video as an MP4, on reel and post permalinks
 - **Draggable panel** — reposition anywhere on screen; position is remembered across sessions
 - **Keyboard shortcuts** — works on all Instagram video types
 
@@ -31,6 +32,19 @@ Shortcuts are intercepted before Instagram's own handlers and do not fire when a
 - Reels (`/reels/`)
 - Stories (`/stories/`)
 - Regular post videos
+
+### Where downloads are offered
+
+The video element is fed by MediaSource, so its `blob:` URL cannot be fetched. The
+download button instead reads the progressive MP4 that Instagram embeds in the page's
+media JSON — already muxed, audio included.
+
+That JSON is the payload the document was rendered with, and there is no field tying a
+block to a particular video on the page. So the button appears only on a permalink —
+`/reel/<code>/`, `/reels/<code>/` or `/p/<code>/` — and withdraws as soon as the feed
+scrolls to a different video, rather than risk saving something other than what is on
+screen. Feed videos would need the page's GraphQL responses intercepted, which a content
+script cannot see from its isolated world.
 
 ## Installation
 
@@ -72,6 +86,9 @@ npm run test:unit
 # Run E2E tests (Playwright) — headless by default
 npm run test:e2e
 
+# Run the suites that drive a signed-in instagram.com (needs .env)
+npm run test:e2e:live
+
 # Watch a browser while the E2E tests run
 HEADED=1 npx playwright test
 
@@ -81,9 +98,11 @@ npm test
 
 #### Tests against a live Instagram session
 
-`reels-feed.spec.ts` and `home-feed.spec.ts` drive the real logged-in feeds, which is
-the only way to reach the multi-video behaviour the panel has to cope with. They **skip
-themselves** unless an account is configured:
+`reels-feed.spec.ts`, `home-feed.spec.ts` and `download.spec.ts` drive the real
+logged-in site, which is the only way to reach the multi-video behaviour the panel has to
+cope with. They form the `live` Playwright project and run on a single worker — one
+account cannot serve several browsers at once without them flaking on each other — and
+they **skip themselves** unless an account is configured:
 
 ```bash
 cp .env.example .env   # then fill in IG_USERNAME / IG_PASSWORD
@@ -103,7 +122,8 @@ broke.
 src/
 ├── content/
 │   ├── index.ts            # Entry point — wires all modules
-│   ├── url-watcher.ts      # SPA navigation detection (patches history API)
+│   ├── url-watcher.ts      # SPA navigation detection (Navigation API)
+│   ├── post-media.ts       # Resolves the downloadable MP4 for a permalink
 │   ├── video-detector.ts   # MutationObserver — finds <video> elements
 │   └── video-controller.ts # Owns one video + its panel lifecycle
 ├── panel/
@@ -114,6 +134,7 @@ src/
 │   ├── ProgressBar.tsx
 │   ├── PlayPause.tsx
 │   ├── VolumeSlider.tsx
+│   ├── DownloadButton.tsx
 │   └── panel.css           # Instagram gradient theme
 └── keyboard/
     └── keyboard-handler.ts # Capture-phase keyboard shortcuts
@@ -122,6 +143,7 @@ tests/
 ├── unit/                   # Vitest, jsdom
 └── e2e/                    # Playwright
     ├── extension.spec.ts   # Loads the unpacked extension in Chrome
+    ├── download.spec.ts    # Saves a real MP4 and checks its tracks
     ├── reels-feed.spec.ts  # Live reels feed (needs .env)
     ├── home-feed.spec.ts   # Live home feed (needs .env)
     ├── fixtures/           # Offline HTML pages

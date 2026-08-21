@@ -54,4 +54,18 @@ describe('Panel', () => {
     await act(async () => { getByRole('button', { name: /🔊/ }).click() })
     expect(video.muted).toBe(true)
   })
+
+  describe('download control', () => {
+    const download = { url: 'https://cdn.example/reel.mp4', filename: 'DcQ7XESu_Yy.mp4' }
+
+    it('offers a download when one has been resolved for this reel', () => {
+      const { getByLabelText } = render(<Panel video={makeVideo()} download={download} />)
+      expect(getByLabelText(/download video/i)).toBeInTheDocument()
+    })
+
+    it('offers no download when none could be resolved', () => {
+      const { queryByLabelText } = render(<Panel video={makeVideo()} download={null} />)
+      expect(queryByLabelText(/download video/i)).not.toBeInTheDocument()
+    })
+  })
 })

@@ -8,14 +8,14 @@ describe('mountPanel', () => {
 
   it('appends a host element to document.body', () => {
     const video = document.createElement('video')
-    const unmount = mountPanel(video)
+    const unmount = mountPanel(video, null)
     expect(document.getElementById('ig-ctrl-host')).not.toBeNull()
     unmount()
   })
 
   it('creates a shadow root on the host', () => {
     const video = document.createElement('video')
-    const unmount = mountPanel(video)
+    const unmount = mountPanel(video, null)
     const host = document.getElementById('ig-ctrl-host')!
     expect(host.shadowRoot).not.toBeNull()
     unmount()
@@ -23,15 +23,15 @@ describe('mountPanel', () => {
 
   it('unmount() removes the host element', () => {
     const video = document.createElement('video')
-    const unmount = mountPanel(video)
+    const unmount = mountPanel(video, null)
     unmount()
     expect(document.getElementById('ig-ctrl-host')).toBeNull()
   })
 
   it('only one host exists even if mountPanel is called twice', () => {
     const video = document.createElement('video')
-    const unmount1 = mountPanel(video)
-    const unmount2 = mountPanel(video)
+    const unmount1 = mountPanel(video, null)
+    const unmount2 = mountPanel(video, null)
     expect(document.querySelectorAll('#ig-ctrl-host').length).toBe(1)
     unmount1()
     unmount2()

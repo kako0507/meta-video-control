@@ -15,15 +15,15 @@ describe('createVideoController', () => {
 
   it('calls mountPanel with the video on creation', () => {
     const video = document.createElement('video')
-    createVideoController(video)
-    expect(mountPanel).toHaveBeenCalledWith(video)
+    createVideoController(video, null)
+    expect(mountPanel).toHaveBeenCalledWith(video, null)
   })
 
   it('destroy() calls the unmount function returned by mountPanel', () => {
     const unmountFn = vi.fn()
     vi.mocked(mountPanel).mockReturnValue(unmountFn)
     const video = document.createElement('video')
-    const controller = createVideoController(video)
+    const controller = createVideoController(video, null)
     controller.destroy()
     expect(unmountFn).toHaveBeenCalledTimes(1)
   })
@@ -32,7 +32,7 @@ describe('createVideoController', () => {
     const unmountFn = vi.fn()
     vi.mocked(mountPanel).mockReturnValue(unmountFn)
     const video = document.createElement('video')
-    const controller = createVideoController(video)
+    const controller = createVideoController(video, null)
     controller.destroy()
     controller.destroy()
     expect(unmountFn).toHaveBeenCalledTimes(1)

@@ -1,9 +1,10 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import Panel from './Panel'
+import { MediaDownload } from '../content/post-media'
 import panelCss from './panel.css?inline'
 
-export function mountPanel(video: HTMLVideoElement): () => void {
+export function mountPanel(video: HTMLVideoElement, download: MediaDownload | null = null): () => void {
   document.getElementById('ig-ctrl-host')?.remove()
 
   const host = document.createElement('div')
@@ -26,7 +27,7 @@ export function mountPanel(video: HTMLVideoElement): () => void {
   document.body.appendChild(host)
 
   const root = createRoot(container)
-  root.render(createElement(Panel, { video }))
+  root.render(createElement(Panel, { video, download }))
 
   return () => {
     root.unmount()

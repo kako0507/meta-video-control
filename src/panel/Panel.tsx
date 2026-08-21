@@ -3,11 +3,14 @@ import SpeedPresets from './SpeedPresets'
 import ProgressBar from './ProgressBar'
 import PlayPause from './PlayPause'
 import VolumeSlider from './VolumeSlider'
+import DownloadButton from './DownloadButton'
 import { videoReducer, createInitialState, VideoAction } from './store'
+import { MediaDownload } from '../content/post-media'
 import { SpeedValue, SPEED_PRESETS, PanelPosition, POSITION_STORAGE_KEY, DEFAULT_POSITION } from '../types'
 
 interface Props {
   video: HTMLVideoElement
+  download?: MediaDownload | null
 }
 
 function readPosition(): PanelPosition {
@@ -21,7 +24,7 @@ function readPosition(): PanelPosition {
   return { x: window.innerWidth - 260, y: window.innerHeight - 220 }
 }
 
-export default function Panel({ video }: Props) {
+export default function Panel({ video, download = null }: Props) {
   const [state, dispatchRaw] = useReducer(videoReducer, video, createInitialState)
 
   const dispatch = useCallback((action: VideoAction) => {
@@ -122,6 +125,7 @@ export default function Panel({ video }: Props) {
           onVolumeChange={v => dispatch({ type: 'SET_VOLUME', payload: v })}
           onMuteToggle={() => dispatch({ type: 'TOGGLE_MUTE' })}
         />
+        {download && <DownloadButton url={download.url} filename={download.filename} />}
       </div>
     </div>
   )
