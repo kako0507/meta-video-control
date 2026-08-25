@@ -8,6 +8,7 @@ export interface FeedVideo {
   /** Share of the viewport this video covers, 0–1. */
   coverage: number
   total: number
+  duration: number
 }
 
 /**
@@ -33,7 +34,14 @@ export async function dominantVideo(page: Page, minCoverage = 0): Promise<FeedVi
     }
     const coverage = bestArea / (innerWidth * innerHeight)
     return best && coverage >= min
-      ? { index: videos.indexOf(best), src: best.currentSrc, rate: best.playbackRate, coverage, total: videos.length }
+      ? {
+          index: videos.indexOf(best),
+          src: best.currentSrc,
+          rate: best.playbackRate,
+          coverage,
+          total: videos.length,
+          duration: best.duration,
+        }
       : null
   }, minCoverage)
 }

@@ -1,5 +1,5 @@
 import { mountPanel } from '../panel/mount'
-import { MediaDownload } from './post-media'
+import { DownloadSource } from '../panel/Panel'
 
 export interface VideoController {
   destroy: () => void
@@ -7,9 +7,9 @@ export interface VideoController {
 
 export function createVideoController(
   video: HTMLVideoElement,
-  download: MediaDownload | null = null
+  downloads: DownloadSource | null = null
 ): VideoController {
-  const unmount = mountPanel(video, download)
+  const unmount = mountPanel(video, downloads)
   let destroyed = false
 
   return {

@@ -8,9 +8,14 @@ import { videoReducer, createInitialState, VideoAction } from './store'
 import { MediaDownload } from '../content/post-media'
 import { SpeedValue, SPEED_PRESETS, PanelPosition, POSITION_STORAGE_KEY, DEFAULT_POSITION } from '../types'
 
+export interface DownloadSource {
+  current: () => MediaDownload | null
+  subscribe: (listener: () => void) => () => void
+}
+
 interface Props {
   video: HTMLVideoElement
-  download?: MediaDownload | null
+  downloads?: DownloadSource | null
 }
 
 function readPosition(): PanelPosition {
@@ -24,8 +29,21 @@ function readPosition(): PanelPosition {
   return { x: window.innerWidth - 260, y: window.innerHeight - 220 }
 }
 
-export default function Panel({ video, download = null }: Props) {
+export default function Panel({ video, downloads = null }: Props) {
   const [state, dispatchRaw] = useReducer(videoReducer, video, createInitialState)
+
+  // Harvesting is asynchronous, so a video can become downloadable after its
+  // panel is already on screen. Follow the source rather than reading once.
+  const [download, setDownload] = useState(() => downloads?.current() ?? null)
+
+  useEffect(() => {
+    if (!downloads) {
+      setDownload(null)
+      return
+    }
+    setDownload(downloads.current())
+    return downloads.subscribe(() => setDownload(downloads.current()))
+  }, [downloads])
 
   const dispatch = useCallback((action: VideoAction) => {
     switch (action.type) {

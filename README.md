@@ -8,7 +8,7 @@ A Chrome extension that adds a floating control panel to Instagram, giving you f
 - **Progress bar** — drag to scrub, shows live time preview while dragging
 - **Play / Pause** button
 - **Volume slider** — drag to set, click mute icon to toggle
-- **Download** — save the video as an MP4, on reel and post permalinks
+- **Download** — save the video on screen as an MP4, anywhere a shortcode identifies it
 - **Draggable panel** — reposition anywhere on screen; position is remembered across sessions
 - **Keyboard shortcuts** — works on all Instagram video types
 
@@ -35,16 +35,29 @@ Shortcuts are intercepted before Instagram's own handlers and do not fire when a
 
 ### Where downloads are offered
 
-The video element is fed by MediaSource, so its `blob:` URL cannot be fetched. The
-download button instead reads the progressive MP4 that Instagram embeds in the page's
-media JSON — already muxed, audio included.
+The video element is fed by MediaSource, so its `blob:` URL cannot be fetched — and the
+audio and video arrive as separate streams, so capturing them would mean muxing them back
+together. Instagram's media payloads describe a plain progressive MP4 instead, already
+muxed with its audio, and that is what the button saves.
 
-That JSON is the payload the document was rendered with, and there is no field tying a
-block to a particular video on the page. So the button appears only on a permalink —
-`/reel/<code>/`, `/reels/<code>/` or `/p/<code>/` — and withdraws as soon as the feed
-scrolls to a different video, rather than risk saving something other than what is on
-screen. Feed videos would need the page's GraphQL responses intercepted, which a content
-script cannot see from its isolated world.
+A content script cannot see the page's own network calls from its isolated world. So a
+second script runs in the page's world at `document_start`, reads media out of `fetch`
+and `XHR` responses, and passes it back over `window.postMessage`. Nothing leaves the
+page, and no extra permission is required — `world: MAIN` is a content-script setting,
+not a permission.
+
+Pairing a video with its media is a structural guess about Instagram's DOM, so it is
+verified before anything is offered. The shortcode comes from the post's permalink link,
+or from the URL path on the reels player, which renders no such link. The harvested
+duration must then agree with the video element's to within 0.5s. That check is what
+makes the pairing safe: it catches a DOM change that would otherwise pick up a
+neighbouring post, and it tells apart the videos of a carousel, which share one shortcode.
+
+Every unresolved case hides the button — no shortcode, no indexed entry, no duration
+agreement, or no harvester. The extension never offers a download it cannot verify.
+
+Stories carry no permalink and no shortcode can be recovered for them, so they remain
+unsupported.
 
 ## Installation
 
@@ -112,7 +125,7 @@ The session is saved to `tests/e2e/.auth/cookies.json` and reused, so a normal r
 touches Instagram's login endpoint. Both `.env` and that directory are gitignored — never
 commit them.
 
-These two suites depend on whatever the live feed happens to serve. `no further video
+These suites depend on whatever the live feed happens to serve. `no further video
 scrolled into view` usually means the feed had no video in reach, not that the extension
 broke.
 
@@ -123,9 +136,18 @@ src/
 ├── content/
 │   ├── index.ts            # Entry point — wires all modules
 │   ├── url-watcher.ts      # SPA navigation detection (Navigation API)
-│   ├── post-media.ts       # Resolves the downloadable MP4 for a permalink
+│   ├── media-index.ts      # Receives harvested media, keyed by shortcode
+│   ├── visible-media.ts    # Which post the video on screen belongs to
+│   ├── resolve-download.ts # Shortcode + duration check → a download, or null
+│   ├── download-source.ts  # Re-resolves on index and video metadata changes
+│   ├── post-media.ts       # The MediaDownload shape
 │   ├── video-detector.ts   # MutationObserver — finds <video> elements
 │   └── video-controller.ts # Owns one video + its panel lifecycle
+├── harvest/                # Runs in the PAGE's world, not the extension's
+│   ├── main.ts             # Bundle entry for harvest.js
+│   ├── entry.ts            # Patches fetch/XHR, buffers and publishes
+│   ├── extract.ts          # Pure: walks parsed JSON for media records
+│   └── bridge.ts           # Message contract shared by both worlds
 ├── panel/
 │   ├── store.ts            # Flux reducer (pure, no side effects)
 │   ├── mount.ts            # Shadow DOM host creation + React root
@@ -144,6 +166,7 @@ tests/
 └── e2e/                    # Playwright
     ├── extension.spec.ts   # Loads the unpacked extension in Chrome
     ├── download.spec.ts    # Saves a real MP4 and checks its tracks
+    ├── harvest.spec.ts     # Bridge → panel, offline via a fixture page
     ├── reels-feed.spec.ts  # Live reels feed (needs .env)
     ├── home-feed.spec.ts   # Live home feed (needs .env)
     ├── fixtures/           # Offline HTML pages

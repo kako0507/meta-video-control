@@ -1,7 +1,7 @@
 import { expect, Page } from '@playwright/test'
 import fs from 'fs'
 import { loggedInTest as test, credentials } from './helpers/logged-in'
-import { waitForPanel } from './helpers/feed'
+import { waitForPanel, scrollToNextVideo } from './helpers/feed'
 
 // A public reel, reachable both as a reel and as a regular post. If it is ever
 // taken down these tests need a new one.
@@ -39,10 +39,32 @@ function expectPlayableMp4(buffer: Buffer) {
   expect(head.includes('soun'), 'expected an audio track').toBe(true)
 }
 
+const hasDownloadButton = (page: Page) =>
+  page.evaluate(
+    () => !!document.getElementById('ig-ctrl-host')?.shadowRoot?.querySelector('.download-btn')
+  )
+
+/** Reads the duration out of an MP4's mvhd box. */
+function mp4Duration(buffer: Buffer): number {
+  const at = buffer.indexOf(Buffer.from('mvhd', 'latin1'))
+  if (at < 0) return NaN
+  const base = at + 8
+  return buffer.readUInt32BE(base + 12) / buffer.readUInt32BE(base + 8)
+}
+
 test.describe('downloading a video', () => {
   test.skip(!credentials, 'set IG_USERNAME and IG_PASSWORD in .env to run this suite')
   test.slow()
 
+  /**
+   * Also the regression test for the replay handshake: this permalink's
+   * media is harvested at DOMContentLoaded, before content.js's index has
+   * been created (and before it has announced itself ready), so the only
+   * way this entry can reach the panel is via the harvester replaying its
+   * buffer once the index's MVC_MEDIA_READY message arrives — the old
+   * permalink-only resolution path that didn't need replay was deleted. Do
+   * not "simplify" this back to a plain load-and-download test.
+   */
   test('saves a reel permalink as a playable mp4 with its audio intact', async ({ page }) => {
     await page.goto(AS_REEL, { waitUntil: 'domcontentloaded' })
     await waitForPanel(page)
@@ -65,21 +87,25 @@ test.describe('downloading a video', () => {
   })
 
   /**
-   * The document keeps the media JSON it was loaded with, and offers no way to
-   * tell which block belongs to the reel now on screen. Scrolling on must
-   * therefore withdraw the button rather than risk saving the wrong video.
+   * Scrolling must re-bind the download to the reel now on screen. This test
+   * once asserted the opposite — that the button withdrew — because resolution
+   * then depended on a permalink anchor the reels player does not render, so
+   * only the reel the page was loaded with could ever resolve. Falling back to
+   * the URL path removed that limitation, and the filename is what proves the
+   * re-bind: it must name the new reel, not the one we scrolled away from.
    */
-  test('withdraws the download once the feed scrolls to another reel', async ({ page }) => {
+  test('re-binds the download to the reel the feed scrolls to', async ({ page }) => {
     await page.goto('https://www.instagram.com/reels/', { waitUntil: 'domcontentloaded' })
     await waitForPanel(page)
 
-    const hasButton = () =>
-      page.evaluate(
-        () => !!document.getElementById('ig-ctrl-host')?.shadowRoot?.querySelector('.download-btn')
-      )
     const reelPath = () => page.evaluate(() => location.pathname)
+    const shortcode = async () => (await reelPath()).split('/').filter(Boolean)[1]
 
-    expect(await hasButton(), 'the reel the feed opened on is downloadable').toBe(true)
+    // The button appears only once the element's metadata and the harvested
+    // entry have both arrived, so it is genuinely asynchronous — poll for it.
+    await expect
+      .poll(() => hasDownloadButton(page), { message: 'the reel the feed opened on is downloadable', timeout: 20000 })
+      .toBe(true)
     const openedOn = await reelPath()
 
     await page.mouse.move(640, 450)
@@ -88,7 +114,29 @@ test.describe('downloading a video', () => {
     await waitForPanel(page)
 
     await expect
-      .poll(hasButton, { message: 'a scrolled-to reel must not offer a download', timeout: 10000 })
-      .toBe(false)
+      .poll(() => hasDownloadButton(page), { message: 'the scrolled-to reel is downloadable too', timeout: 20000 })
+      .toBe(true)
+
+    const saved = await saveVideo(page)
+    expect(saved.filename).toBe(`${await shortcode()}.mp4`)
+    expectPlayableMp4(saved.buffer)
+  })
+
+  /**
+   * The only test that exercises interception and correlation together: nothing
+   * about a feed video is in the document, so a saved file that matches the
+   * element's duration can only have come through the harvester.
+   */
+  test('saves a video scrolled to in the home feed', async ({ page }) => {
+    await page.goto('https://www.instagram.com/', { waitUntil: 'domcontentloaded' })
+    const onScreen = await scrollToNextVideo(page, null).catch(() => null)
+    test.skip(!onScreen, 'this load of the feed surfaced no video to save')
+    await waitForPanel(page)
+
+    await expect.poll(() => hasDownloadButton(page), { timeout: 20000 }).toBe(true)
+    const saved = await saveVideo(page)
+
+    expectPlayableMp4(saved.buffer)
+    expect(Math.abs(mp4Duration(saved.buffer) - onScreen!.duration)).toBeLessThan(0.5)
   })
 })

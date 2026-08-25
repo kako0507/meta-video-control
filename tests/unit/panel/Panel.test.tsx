@@ -56,16 +56,44 @@ describe('Panel', () => {
   })
 
   describe('download control', () => {
-    const download = { url: 'https://cdn.example/reel.mp4', filename: 'DcQ7XESu_Yy.mp4' }
+    const download = { url: 'https://cdn.example/reel.mp4', filename: 'AAA.mp4' }
 
-    it('offers a download when one has been resolved for this reel', () => {
-      const { getByLabelText } = render(<Panel video={makeVideo()} download={download} />)
+    function source(initial: typeof download | null) {
+      let value = initial
+      const listeners = new Set<() => void>()
+      return {
+        current: () => value,
+        subscribe(listener: () => void) {
+          listeners.add(listener)
+          return () => listeners.delete(listener)
+        },
+        resolveLater(next: typeof download) {
+          value = next
+          listeners.forEach(listener => listener())
+        },
+      }
+    }
+
+    it('offers a download when the source already has one', () => {
+      const { getByLabelText } = render(<Panel video={makeVideo()} downloads={source(download)} />)
       expect(getByLabelText(/download video/i)).toBeInTheDocument()
     })
 
-    it('offers no download when none could be resolved', () => {
-      const { queryByLabelText } = render(<Panel video={makeVideo()} download={null} />)
+    it('offers no download while the source has none', () => {
+      const { queryByLabelText } = render(<Panel video={makeVideo()} downloads={source(null)} />)
       expect(queryByLabelText(/download video/i)).not.toBeInTheDocument()
+    })
+
+    it('offers the download once harvesting catches up after mount', async () => {
+      const downloads = source(null)
+      const { queryByLabelText, findByLabelText } = render(
+        <Panel video={makeVideo()} downloads={downloads} />
+      )
+      expect(queryByLabelText(/download video/i)).not.toBeInTheDocument()
+
+      await act(async () => downloads.resolveLater(download))
+
+      expect(await findByLabelText(/download video/i)).toBeInTheDocument()
     })
   })
 })

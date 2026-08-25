@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <body>
+    <article>
+      <!--
+        A real, tiny video (not a JS override of `.duration`): the extension
+        loads with content.js in an isolated world separate from this page's
+        main world. A `duration` set via Object.defineProperty from outside
+        only shadows the getter on the wrapper of the world that set it, so
+        the isolated-world content script would still read NaN. Giving the
+        element a genuine source makes Blink compute one real duration that
+        both worlds' wrappers report identically.
+      -->
+      <video id="v" muted src="/assets/harvest.mp4"></video>
+      <a href="/p/FIXTURE1/">2h</a>
+    </article>
+  </body>
+</html>
