@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
-import { copyFileSync, mkdirSync, readdirSync, existsSync } from 'fs'
+import { copyFileSync, mkdirSync, readdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
+
+import { resolveVersion } from './scripts/version.mjs'
 
 export default defineConfig({
   plugins: [
@@ -9,7 +11,11 @@ export default defineConfig({
     {
       name: 'copy-extension-files',
       closeBundle() {
-        copyFileSync('manifest.json', 'dist/manifest.json')
+        // The git tag, not the checked-in manifest, decides the version.
+        const version = resolveVersion()
+        const manifest = JSON.parse(readFileSync('manifest.json', 'utf8'))
+        if (version) manifest.version = version
+        writeFileSync('dist/manifest.json', `${JSON.stringify(manifest, null, 2)}\n`)
         mkdirSync('dist/icons', { recursive: true })
         if (existsSync('icons')) {
           readdirSync('icons').forEach(f => copyFileSync(`icons/${f}`, `dist/icons/${f}`))

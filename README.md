@@ -61,6 +61,18 @@ unsupported.
 
 ## Installation
 
+### From a release
+
+1. Open the [latest release](https://github.com/kako0507/meta-video-control/releases/latest)
+   and **download** the `.crx` — clicking it in Chrome fails with *Apps, extensions and
+   scripts cannot be added from this website*, which is Chrome refusing any install a
+   website starts, not a problem with the file
+2. Open `chrome://extensions` and enable **Developer mode**
+3. Drag the downloaded `.crx` onto that page and confirm the prompt
+
+Every release is signed with the same key, so an install made this way keeps its
+extension ID and picks up later versions dropped on top of it.
+
 ### From source
 
 1. Clone this repository
@@ -141,9 +153,14 @@ Pushing a tag builds the extension and publishes a GitHub release
 git tag 1.1.0 && git push origin 1.1.0
 ```
 
-The tag is the version. `scripts/apply-version.mjs` writes it into `manifest.json` and
+The tag is the version. `scripts/version.mjs` writes it into `manifest.json` and
 `package.json` before the build, so the tag must be one to four dot-separated integers —
 a `v` prefix is stripped, but `1.1.0-beta` fails the job, because Chrome cannot parse it.
+
+Local builds take the version from `git describe`, so `dist/` reports the tag it was cut
+from, plus a fourth part counting commits since that tag: three commits after `1.1.0`
+build as `1.1.0.3`. The version in the checked-in `manifest.json` is only a fallback for
+builds made outside a git checkout.
 
 The release carries a signed `.crx` (for self-hosted or policy-managed installs) and a
 `.zip` (for the Chrome Web Store). Chrome signs the crx with the private key in the

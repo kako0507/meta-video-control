@@ -25,13 +25,15 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          VERSION=$(node scripts/apply-version.mjs "$TAG" manifest.json package.json)
+          VERSION=$(node scripts/version.mjs "$TAG" manifest.json package.json)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building version $VERSION from tag $TAG"
 
       - run: npm run test:unit
 
       - run: npm run build
+        env:
+          EXTENSION_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Pack the signed crx
         env:
