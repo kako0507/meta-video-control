@@ -14,7 +14,8 @@
     "test:e2e": "npm run build && playwright test --project=offline",
     "test:e2e:live": "npm run build && playwright test --project=live --workers=1",
     "test": "npm run test:unit && npm run test:e2e",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "demo": "npm run build && playwright test --project=demo && node scripts/make-demo-gif.mjs"
   },
   "keywords": [],
   "author": "Tim Kuo",

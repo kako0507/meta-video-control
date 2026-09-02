@@ -10,3 +10,4 @@ tests/e2e/.auth/
 *.pem
 *.crx
 *.zip
+docs/.demo-video/

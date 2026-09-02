@@ -13,6 +13,9 @@ export interface Credentials {
   password: string
 }
 
+/** Where ensureLoggedIn keeps the session it reuses. */
+export const sessionFile = cookiesPath
+
 /** Reads .env without pulling in a dependency. Returns null when unconfigured. */
 export function readCredentials(): Credentials | null {
   const envPath = path.resolve(projectRoot, '.env')
@@ -33,7 +36,9 @@ export function readCredentials(): Credentials | null {
  * so specs can run in parallel — Chrome refuses to share one user-data-dir.
  * The Instagram session travels as cookies instead; see ensureLoggedIn.
  */
-export async function launchExtensionContext(): Promise<BrowserContext> {
+export async function launchExtensionContext(
+  overrides: Parameters<typeof chromium.launchPersistentContext>[1] = {}
+): Promise<BrowserContext> {
   const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mvc-ig-'))
   const context = await chromium.launchPersistentContext(profileDir, {
     channel: 'chromium',
@@ -44,6 +49,7 @@ export async function launchExtensionContext(): Promise<BrowserContext> {
       '--mute-audio',
     ],
     viewport: { width: 1280, height: 900 },
+    ...overrides,
   })
   context.once('close', () => {
     // Windows keeps a handle on the profile for a moment after Chrome exits.

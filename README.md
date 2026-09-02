@@ -2,6 +2,8 @@
 
 A Chrome extension that adds a floating control panel to Instagram, giving you full control over video playback — speed, progress scrubbing, play/pause, and volume — all without being blocked by Instagram's overlay divs.
 
+![The panel driving a reel on instagram.com](docs/demo.gif)
+
 ## Features
 
 - **Speed presets** — 0.5×, 1×, 1.5×, 2×, 3×
@@ -108,6 +110,9 @@ npm run build:watch
 # Regenerate icons/ from the SVG in scripts/make-icons.mjs
 npm run icons
 
+# Re-record docs/demo.gif (signs in, drives a reel, needs .env and ffmpeg)
+npm run demo
+
 # Run unit tests (Vitest)
 npm run test:unit
 
@@ -167,6 +172,19 @@ The release carries a signed `.crx` (for self-hosted or policy-managed installs)
 `CRX_PRIVATE_KEY` repository secret; that key is what fixes the extension ID, so losing
 it means every existing install stops seeing updates. Keep the `.pem` somewhere safe and
 out of the repo.
+
+#### The README demo
+
+`npm run demo` records `docs/demo.gif`: `tests/e2e/demo.spec.ts` signs in, opens the
+first reel on [@instagram](https://www.instagram.com/instagram/reels/), and drives the
+panel through speed, seeking, volume, play/pause and a drag, while an injected pointer
+shows where the clicks land. `scripts/make-demo-gif.mjs` then crops the recording to the
+video and converts it with ffmpeg.
+
+Two things about that script are deliberate. It signs in through a second browser that is
+not being recorded, so the login form cannot reach the gif. And it crops to the video
+before converting, which leaves the comment column — other people's handles and avatars —
+out of a file that ships in the repository.
 
 ### Project structure
 
