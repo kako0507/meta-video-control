@@ -7,3 +7,6 @@ playwright-report/
 .env.*
 !.env.example
 tests/e2e/.auth/
+*.pem
+*.crx
+*.zip

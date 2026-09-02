@@ -129,6 +129,25 @@ These suites depend on whatever the live feed happens to serve. `no further vide
 scrolled into view` usually means the feed had no video in reach, not that the extension
 broke.
 
+### Releasing
+
+Pushing a tag builds the extension and publishes a GitHub release
+(`.github/workflows/release.yml`):
+
+```bash
+git tag 1.1.0 && git push origin 1.1.0
+```
+
+The tag is the version. `scripts/apply-version.mjs` writes it into `manifest.json` and
+`package.json` before the build, so the tag must be one to four dot-separated integers —
+a `v` prefix is stripped, but `1.1.0-beta` fails the job, because Chrome cannot parse it.
+
+The release carries a signed `.crx` (for self-hosted or policy-managed installs) and a
+`.zip` (for the Chrome Web Store). Chrome signs the crx with the private key in the
+`CRX_PRIVATE_KEY` repository secret; that key is what fixes the extension ID, so losing
+it means every existing install stops seeing updates. Keep the `.pem` somewhere safe and
+out of the repo.
+
 ### Project structure
 
 ```

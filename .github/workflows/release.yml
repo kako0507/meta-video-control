@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags: ['*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Take the version from the tag
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION=$(node scripts/apply-version.mjs "$TAG" manifest.json package.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version $VERSION from tag $TAG"
+
+      - run: npm run test:unit
+
+      - run: npm run build
+
+      - name: Pack the signed crx
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: |
+          if [ -z "$CRX_PRIVATE_KEY" ]; then
+            echo "::error::Secret CRX_PRIVATE_KEY is not set; the crx would get a new extension ID."
+            exit 1
+          fi
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || true)
+          if [ -z "$CHROME" ]; then
+            echo "::error::Google Chrome is not available on this runner, cannot pack a crx."
+            exit 1
+          fi
+          KEY="$RUNNER_TEMP/crx-key.pem"
+          (umask 077 && printf '%s\n' "$CRX_PRIVATE_KEY" > "$KEY")
+          "$CHROME" --pack-extension="$GITHUB_WORKSPACE/dist" --pack-extension-key="$KEY" --no-message-box --no-sandbox
+          rm -f "$KEY"
+          test -f dist.crx || { echo "::error::Chrome did not produce dist.crx"; exit 1; }
+
+      - name: Zip the unpacked build for the Web Store
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: cd dist && zip -qr "../meta-video-control-$VERSION.zip" .
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mv dist.crx "meta-video-control-$VERSION.crx"
+          gh release create "$TAG" --title "$TAG" --generate-notes \
+            "meta-video-control-$VERSION.crx" "meta-video-control-$VERSION.zip"
