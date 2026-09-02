@@ -93,6 +93,9 @@ npm run build
 # Build and watch for changes
 npm run build:watch
 
+# Regenerate icons/ from the SVG in scripts/make-icons.mjs
+npm run icons
+
 # Run unit tests (Vitest)
 npm run test:unit
 
